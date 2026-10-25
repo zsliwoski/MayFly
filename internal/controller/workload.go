@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"maps"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,9 +27,7 @@ func namespaceName(env *previewv1alpha1.Environment) string {
 // The CRD also rejects reserved keys.
 func commonLabels(env *previewv1alpha1.Environment) map[string]string {
 	l := make(map[string]string, len(env.Spec.Labels)+2)
-	for k, v := range env.Spec.Labels {
-		l[k] = v
-	}
+	maps.Copy(l, env.Spec.Labels)
 	l[labelEnvironment] = env.Name
 	l[labelManagedBy] = managedByValue
 	return l

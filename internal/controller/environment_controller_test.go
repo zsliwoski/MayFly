@@ -33,7 +33,7 @@ func newEnvironment(name, ttl string, workloads ...previewv1alpha1.WorkloadSpec)
 }
 
 func webWorkload(replicas int32) previewv1alpha1.WorkloadSpec {
-	return previewv1alpha1.WorkloadSpec{Name: "web", Image: "nginx:1.27", Port: 8080, Replicas: &replicas}
+	return previewv1alpha1.WorkloadSpec{Name: "web", Image: testImage, Port: 8080, Replicas: &replicas}
 }
 
 func getEnv(name string) *previewv1alpha1.Environment {
@@ -105,7 +105,7 @@ var _ = Describe("Environment controller", func() {
 			name = uniqueName("prov")
 			ns = namespacePrefix + name
 			env := newEnvironment(name, "1h", webWorkload(2))
-			env.Spec.Labels = map[string]string{"team": "payments"}
+			env.Spec.Labels = map[string]string{"team": testTeam}
 			Expect(k8sClient.Create(ctx, env)).To(Succeed())
 		})
 
@@ -117,7 +117,7 @@ var _ = Describe("Environment controller", func() {
 			env := getEnv(name)
 			expectControlledBy(namespace, env)
 			Expect(namespace.Labels).To(HaveKeyWithValue(labelEnvironment, name))
-			Expect(namespace.Labels).To(HaveKeyWithValue("team", "payments"))
+			Expect(namespace.Labels).To(HaveKeyWithValue("team", testTeam))
 
 			dep := &appsv1.Deployment{}
 			Eventually(func() error {
@@ -125,7 +125,7 @@ var _ = Describe("Environment controller", func() {
 			}).Should(Succeed())
 			expectControlledBy(dep, env)
 			Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
-			Expect(dep.Spec.Template.Spec.Containers[0].Image).To(Equal("nginx:1.27"))
+			Expect(dep.Spec.Template.Spec.Containers[0].Image).To(Equal(testImage))
 
 			svc := &corev1.Service{}
 			Eventually(func() error {

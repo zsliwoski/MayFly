@@ -10,6 +10,11 @@ import (
 	previewv1alpha1 "example.dev/mayfly/api/v1alpha1"
 )
 
+const (
+	testImage = "nginx:1.27"
+	testTeam  = "payments"
+)
+
 func TestComputeExpiry(t *testing.T) {
 	created := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	tests := []struct {
@@ -64,13 +69,13 @@ func TestTimeUntil(t *testing.T) {
 
 func newTestEnvironment() (*previewv1alpha1.Environment, *previewv1alpha1.WorkloadSpec) {
 	two := int32(2)
-	w := previewv1alpha1.WorkloadSpec{Name: "web", Image: "nginx:1.27", Port: 8080, Replicas: &two}
+	w := previewv1alpha1.WorkloadSpec{Name: "web", Image: testImage, Port: 8080, Replicas: &two}
 	env := &previewv1alpha1.Environment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pr-42"},
 		Spec: previewv1alpha1.EnvironmentSpec{
 			TTL:       "1h",
 			Workloads: []previewv1alpha1.WorkloadSpec{w},
-			Labels:    map[string]string{"team": "payments", labelEnvironment: "hijack"},
+			Labels:    map[string]string{"team": testTeam, labelEnvironment: "hijack"},
 		},
 	}
 	return env, &env.Spec.Workloads[0]
@@ -87,7 +92,7 @@ func TestDeploymentFor(t *testing.T) {
 		t.Errorf("replicas = %d, want 2", *d.Spec.Replicas)
 	}
 	c := d.Spec.Template.Spec.Containers[0]
-	if c.Image != "nginx:1.27" || c.Ports[0].ContainerPort != 8080 {
+	if c.Image != testImage || c.Ports[0].ContainerPort != 8080 {
 		t.Errorf("bad container: %+v", c)
 	}
 	// Selector must match pod template labels or the API server rejects the Deployment.
@@ -96,7 +101,7 @@ func TestDeploymentFor(t *testing.T) {
 			t.Errorf("selector label %s=%s not in pod template", k, v)
 		}
 	}
-	if d.Labels["team"] != "payments" {
+	if d.Labels["team"] != testTeam {
 		t.Error("user label not propagated")
 	}
 	if d.Labels[labelEnvironment] != "pr-42" {

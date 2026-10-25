@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -139,9 +140,7 @@ func (r *EnvironmentReconciler) ensureNamespace(ctx context.Context, env *previe
 		if ns.Labels == nil {
 			ns.Labels = map[string]string{}
 		}
-		for k, v := range commonLabels(env) {
-			ns.Labels[k] = v
-		}
+		maps.Copy(ns.Labels, commonLabels(env))
 		return controllerutil.SetControllerReference(env, ns, r.Scheme)
 	})
 	return err
