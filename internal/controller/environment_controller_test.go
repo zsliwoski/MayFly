@@ -33,7 +33,7 @@ func newEnvironment(name, ttl string, workloads ...previewv1alpha1.WorkloadSpec)
 }
 
 func webWorkload(replicas int32) previewv1alpha1.WorkloadSpec {
-	return previewv1alpha1.WorkloadSpec{Name: "web", Image: testImage, Port: 8080, Replicas: &replicas}
+	return previewv1alpha1.WorkloadSpec{Name: testWorkload, Image: testImage, Port: 8080, Replicas: &replicas}
 }
 
 func getEnv(name string) *previewv1alpha1.Environment {
@@ -121,7 +121,7 @@ var _ = Describe("Environment controller", func() {
 
 			dep := &appsv1.Deployment{}
 			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: "web"}, dep)
+				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: testWorkload}, dep)
 			}).Should(Succeed())
 			expectControlledBy(dep, env)
 			Expect(*dep.Spec.Replicas).To(Equal(int32(2)))
@@ -129,7 +129,7 @@ var _ = Describe("Environment controller", func() {
 
 			svc := &corev1.Service{}
 			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: "web"}, svc)
+				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: testWorkload}, svc)
 			}).Should(Succeed())
 			expectControlledBy(svc, env)
 			Expect(svc.Spec.Ports[0].Port).To(Equal(int32(8080)))
@@ -157,7 +157,7 @@ var _ = Describe("Environment controller", func() {
 				g.Expect(progressing.Status).To(Equal(metav1.ConditionTrue))
 			}).Should(Succeed())
 
-			markDeploymentAvailable(ns, "web", 2)
+			markDeploymentAvailable(ns, testWorkload, 2)
 
 			Eventually(func(g Gomega) {
 				env := getEnv(name)
@@ -174,11 +174,11 @@ var _ = Describe("Environment controller", func() {
 		It("restores a deleted service and applies spec changes (idempotent convergence)", func() {
 			svc := &corev1.Service{}
 			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: "web"}, svc)
+				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: testWorkload}, svc)
 			}).Should(Succeed())
 			Expect(k8sClient.Delete(ctx, svc)).To(Succeed())
 			Eventually(func() error {
-				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: "web"}, &corev1.Service{})
+				return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: testWorkload}, &corev1.Service{})
 			}).Should(Succeed())
 
 			Eventually(func(g Gomega) {
@@ -189,7 +189,7 @@ var _ = Describe("Environment controller", func() {
 			}).Should(Succeed())
 			Eventually(func(g Gomega) {
 				dep := &appsv1.Deployment{}
-				g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: "web"}, dep)).To(Succeed())
+				g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: testWorkload}, dep)).To(Succeed())
 				g.Expect(*dep.Spec.Replicas).To(Equal(int32(3)))
 			}).Should(Succeed())
 		})
@@ -221,7 +221,7 @@ var _ = Describe("Environment controller", func() {
 
 		It("defaults replicas to 1", func() {
 			name := uniqueName("defrep")
-			env := newEnvironment(name, "1h", previewv1alpha1.WorkloadSpec{Name: "web", Image: "nginx", Port: 80})
+			env := newEnvironment(name, "1h", previewv1alpha1.WorkloadSpec{Name: testWorkload, Image: "nginx", Port: 80})
 			Expect(k8sClient.Create(ctx, env)).To(Succeed())
 			Expect(*getEnv(name).Spec.Workloads[0].Replicas).To(Equal(int32(1)))
 		})

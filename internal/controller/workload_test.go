@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	testImage = "nginx:1.27"
-	testTeam  = "payments"
+	testImage    = "nginx:1.27"
+	testTeam     = "payments"
+	testWorkload = "web"
 )
 
 func TestComputeExpiry(t *testing.T) {
@@ -69,7 +70,7 @@ func TestTimeUntil(t *testing.T) {
 
 func newTestEnvironment() (*previewv1alpha1.Environment, *previewv1alpha1.WorkloadSpec) {
 	two := int32(2)
-	w := previewv1alpha1.WorkloadSpec{Name: "web", Image: testImage, Port: 8080, Replicas: &two}
+	w := previewv1alpha1.WorkloadSpec{Name: testWorkload, Image: testImage, Port: 8080, Replicas: &two}
 	env := &previewv1alpha1.Environment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pr-42"},
 		Spec: previewv1alpha1.EnvironmentSpec{
@@ -85,7 +86,7 @@ func TestDeploymentFor(t *testing.T) {
 	env, w := newTestEnvironment()
 	d := deploymentFor(env, w)
 
-	if d.Namespace != "mayfly-pr-42" || d.Name != "web" {
+	if d.Namespace != "mayfly-pr-42" || d.Name != testWorkload {
 		t.Errorf("unexpected identity %s/%s", d.Namespace, d.Name)
 	}
 	if *d.Spec.Replicas != 2 {
