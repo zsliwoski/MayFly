@@ -1,0 +1,215 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: environments.preview.example.dev
+spec:
+  group: preview.example.dev
+  names:
+    kind: Environment
+    listKind: EnvironmentList
+    plural: environments
+    shortNames:
+    - env
+    singular: environment
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.expiresAt
+      name: Expires
+      type: date
+    - jsonPath: .status.namespace
+      name: Namespace
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Environment is cluster-scoped so it can own the (cluster-scoped) Namespace
+          through a real ownerReference. Name is capped so "mayfly-<name>" fits in 63 chars.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EnvironmentSpec is the desired state.
+            properties:
+              labels:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Labels are propagated to the namespace and every object created in it.
+                  Keys with the "preview.example.dev/" prefix are reserved for the controller.
+                maxProperties: 20
+                type: object
+                x-kubernetes-validations:
+                - message: label keys must not use the reserved preview.example.dev/
+                    prefix
+                  rule: self.all(k, !k.startsWith('preview.example.dev/'))
+              ttl:
+                description: |-
+                  TTL is how long the environment lives, measured from metadata.creationTimestamp.
+                  Go duration syntax, seconds/minutes/hours only (e.g. "30m", "2h", "1h30m").
+                  Because it is anchored to creation time, editing it extends or shortens the lifetime.
+                maxLength: 32
+                minLength: 2
+                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
+                type: string
+              workloads:
+                description: Workloads are keyed by name; the map list-type makes
+                  server-side apply merge per item.
+                items:
+                  description: WorkloadSpec describes one Deployment + Service pair.
+                  properties:
+                    image:
+                      description: Image is the container image to run.
+                      minLength: 1
+                      type: string
+                    name:
+                      description: Name is used for both the Deployment and the Service,
+                        so it must be a DNS label.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    port:
+                      description: Port is the container port, also exposed by the
+                        Service.
+                      format: int32
+                      maximum: 65535
+                      minimum: 1
+                      type: integer
+                    replicas:
+                      default: 1
+                      description: Replicas defaults to 1. 0 is allowed (scaled-down
+                        preview).
+                      format: int32
+                      maximum: 10
+                      minimum: 0
+                      type: integer
+                  required:
+                  - image
+                  - name
+                  - port
+                  type: object
+                maxItems: 10
+                minItems: 1
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+            required:
+            - ttl
+            - workloads
+            type: object
+          status:
+            description: EnvironmentStatus is the observed state.
+            properties:
+              conditions:
+                description: 'Conditions: Ready, Progressing, Degraded. Managed with
+                  meta.SetStatusCondition.'
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              expiresAt:
+                description: ExpiresAt is creationTimestamp + spec.ttl, recorded for
+                  humans and dashboards.
+                format: date-time
+                type: string
+              namespace:
+                description: Namespace is the name of the namespace this environment
+                  owns.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the spec generation the conditions
+                  were computed from.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+        x-kubernetes-validations:
+        - message: metadata.name must be at most 50 characters
+          rule: size(self.metadata.name) <= 50
+    served: true
+    storage: true
+    subresources:
+      status: {}

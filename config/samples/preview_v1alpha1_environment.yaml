@@ -1,0 +1,19 @@
+apiVersion: preview.example.dev/v1alpha1
+kind: Environment
+metadata:
+  labels:
+    app.kubernetes.io/name: mayfly
+    app.kubernetes.io/managed-by: kustomize
+  name: environment-sample
+spec:
+  ttl: 2h
+  labels:
+    team: platform
+  workloads:
+  - name: web
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    port: 8080
+    replicas: 2
+  - name: api
+    image: ghcr.io/example/api:latest
+    port: 9000
